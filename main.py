@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Entrypoint for the news-image-20261126 v3 entry.
+"""Entrypoint for the news-image-20261126 v4 entry.
 
-Thursday 26 November 2026, 36 stories across 9 regions.
+Thursday 26 November 2026, 40 stories across 9 regions, 13 drawn scenes.
 
 The entry is a single front-page image. This script places that image
-(assets/entry.jpg, drawn by build-v3.py) into the output directory as
+(assets/entry.jpg, drawn by build-v4.py) into the output directory as
 entry.png so the grader can find it. The output directory is /output
 unless MAKEFUN_OUTPUT_DIR is set.
 
@@ -18,6 +18,8 @@ import os
 import shutil
 from pathlib import Path
 
+# v4 asset: 1024x1024 JPEG, 40 stories, 13 drawn scenes, world map,
+# UTC timeline and date check — drawn in-session by build-v4.py.
 ENTRY = Path(__file__).resolve().parent / "assets" / "entry.jpg"
 
 
