@@ -1,30 +1,41 @@
 #!/usr/bin/env python3
-"""News-image v5 entry for Thursday 26 November 2026.
+"""News-image v6 entry for Thursday 26 November 2026.
 
 Draws a 1024x1024 newspaper front page with PIL and writes it to the
 output directory as entry.png (JPEG data, quality 92, under 1 MiB).
 
-v5 keeps v4's front page — masthead, two lead stories, THIRTEEN drawn
-scene panels, a world map, a UTC timeline, 48 verified stories grouped
-by region, and a date check — and ADDS three genuinely new sections:
+v6 fixes the crash that got v5 rejected (the grader run exited 1):
+v5 loaded DejaVu from the hardcoded system path
+/usr/share/fonts/truetype/dejavu/, which the grader image does not
+have. Fonts are now bundled in the repo under assets/fonts/ and
+loaded from there first, with the system path and PIL's default font
+as fallbacks, so the program can never die on a missing font again.
+Verified: the entrypoint exits 0 and produces a byte-identical
+image with the system font directory hidden.
 
-  * MARKETS & WEATHER — a markets table (FTSE 100, DAX, Nikkei 225,
-    Brent crude, all verified closes for Thu 26 Nov 2026, Wall Street
-    shut for Thanksgiving) beside a weather strip for five world
-    cities (verified conditions for 26 Nov 2026).
-  * SPORT — a results strip: the three NFL Thanksgiving games, all
-    decided in the final seconds (a first in NFL history), plus
-    Japan 3-2 Brazil.
-  * QUOTE OF THE DAY — an editorial box with a real, attributed quote
-    from 26 Nov 2026.
+v6 keeps v5's front page — masthead, two lead stories, THIRTEEN
+drawn scene panels, a world map, a UTC timeline, 52 verified stories
+grouped by region, and a date check, plus Markets & Weather, a
+Sports strip and a Quote of the Day — and ADDS two genuinely new
+sections sharing one band below the story grid:
 
-It also raises the story count from 40 to 48 verified, dated, sourced
-stories (8 more, in the regions that had 4 each), keeping the
-9-region structure.
+  * ON THIS DAY — four things that happened on a 26 November in
+    other years (Tutankhamun's tomb 1922, Casablanca 1942,
+    Concorde's last flight 2003, Curiosity launched 2011).
+  * DATA SNAPSHOT — the day's four market moves from the Markets
+    panel, drawn as horizontal bars so the scale is visible.
 
-Every story, market value, temperature, score and quote below was
-verified against a real source for Thursday 26 November 2026; the
-sources are listed in the footer and in stories-v5.md.
+It also raises the story count from 48 to 52 verified stories (one
+more in each region that had 5), expands the UTC timeline from 9 to
+14 events, and adds four more labelled hubs to the world map
+(London, Dubai, Johannesburg, Buenos Aires). The region grid runs
+one point smaller (head 10pt, detail 8pt) so the new band fits
+without dropping any story.
+
+Every story, market value, temperature, score, quote and historical
+date below was verified against a real source for Thursday
+26 November 2026 (or, for On This Day, the year named); the sources
+are listed in the footer and in stories-v6.md.
 
 The output directory is /output unless MAKEFUN_OUTPUT_DIR is set.
 The program is deterministic: it writes the same bytes every run.
@@ -43,34 +54,60 @@ from PIL import Image, ImageDraw, ImageFont
 
 W, H = 1024, 1024
 
-FONT_DIR = "/usr/share/fonts/truetype/dejavu/"
-F_SERIF_B = ImageFont.truetype(FONT_DIR + "DejaVuSerif-Bold.ttf", 36)
-F_SERIF = ImageFont.truetype(FONT_DIR + "DejaVuSerif.ttf", 16)
-F_SANS_B = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 13)
-F_SANS = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 11)
-F_SANS_SM = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 10)
-F_SANS_XS = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 9)
-F_HEAD = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 11)
-F_HEAD_SM = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 10)
-F_REGION = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 14)
-F_MAST_SUB = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 13)
-F_LEAD_H = ImageFont.truetype(FONT_DIR + "DejaVuSerif-Bold.ttf", 19)
-F_LEAD_D = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 11)
-F_SEC = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 13)
-F_TIME = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 10)
-F_TL = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 9)
-F_CAP = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 10)
-F_FOOT = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 9)
-F_FOOT_B = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 10)
-F_SC_H = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 9)
-F_SC_D = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 8)
-F_MKT = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 10)
-F_MKT_B = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 10)
-F_WX = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 10)
-F_SPORT = ImageFont.truetype(FONT_DIR + "DejaVuSans-Bold.ttf", 11)
-F_QUOTE = ImageFont.truetype(FONT_DIR + "DejaVuSerif.ttf", 13)
-F_QUOTE_B = ImageFont.truetype(FONT_DIR + "DejaVuSerif-Bold.ttf", 13)
-F_MAP_LBL = ImageFont.truetype(FONT_DIR + "DejaVuSans.ttf", 8)
+# ------------------------------------------------------------- fonts (v6)
+# v6 crash fix: v5 loaded DejaVu from the hardcoded system path
+# /usr/share/fonts/truetype/dejavu/, which the grader image does not
+# have — the program died at import with "OSError: cannot open
+# resource" and the entry was rejected. Fonts are now bundled in the
+# repo under assets/fonts/ and loaded from there first; the system
+# path is only a fallback, and PIL's built-in default font is the
+# last resort, so the program can never die on a missing font again.
+_REPO_FONT_DIR = Path(__file__).resolve().parent / "assets" / "fonts"
+_SYS_FONT_DIR = Path("/usr/share/fonts/truetype/dejavu")
+
+
+def _font(name, size):
+    """Load a bundled repo font, else the system copy, else PIL default."""
+    for path in (_REPO_FONT_DIR / name, _SYS_FONT_DIR / name):
+        try:
+            return ImageFont.truetype(str(path), size)
+        except OSError:
+            continue
+    return ImageFont.load_default(size=size)
+
+
+F_SERIF_B = _font("DejaVuSerif-Bold.ttf", 36)
+F_SERIF = _font("DejaVuSerif.ttf", 16)
+F_SANS_B = _font("DejaVuSans-Bold.ttf", 13)
+F_SANS = _font("DejaVuSans.ttf", 11)
+F_SANS_SM = _font("DejaVuSans.ttf", 10)
+F_SANS_XS = _font("DejaVuSans.ttf", 9)
+F_HEAD = _font("DejaVuSans-Bold.ttf", 11)
+F_HEAD_SM = _font("DejaVuSans-Bold.ttf", 10)
+F_REGION = _font("DejaVuSans-Bold.ttf", 14)
+F_MAST_SUB = _font("DejaVuSans.ttf", 13)
+F_LEAD_H = _font("DejaVuSerif-Bold.ttf", 19)
+F_LEAD_D = _font("DejaVuSans.ttf", 11)
+F_SEC = _font("DejaVuSans-Bold.ttf", 13)
+F_TIME = _font("DejaVuSans-Bold.ttf", 10)
+F_TL = _font("DejaVuSans.ttf", 9)
+F_CAP = _font("DejaVuSans.ttf", 10)
+F_FOOT = _font("DejaVuSans.ttf", 9)
+F_FOOT_S = _font("DejaVuSans.ttf", 8)
+F_FOOT_B = _font("DejaVuSans-Bold.ttf", 10)
+F_SC_H = _font("DejaVuSans-Bold.ttf", 9)
+F_SC_D = _font("DejaVuSans.ttf", 8)
+F_MKT = _font("DejaVuSans.ttf", 10)
+F_MKT_B = _font("DejaVuSans-Bold.ttf", 10)
+F_WX = _font("DejaVuSans.ttf", 10)
+F_SPORT = _font("DejaVuSans-Bold.ttf", 11)
+F_QUOTE = _font("DejaVuSerif.ttf", 13)
+F_QUOTE_B = _font("DejaVuSerif-Bold.ttf", 13)
+F_MAP_LBL = _font("DejaVuSans.ttf", 8)
+# Grid fonts (v6): the region grid runs one point smaller so the page
+# gains room for two new sections without dropping any story.
+F_GRID_H = _font("DejaVuSans-Bold.ttf", 10)
+F_GRID_D = _font("DejaVuSans.ttf", 8)
 
 PAPER = (253, 252, 247)
 INK = (17, 17, 17)
@@ -118,10 +155,13 @@ def resolve_output_dir() -> Path:
 
 
 # ------------------------------------------------------------------ stories
-# 48 verified stories, Thursday 26 November 2026, 9 regions.
-# v4's 40 (stories-v3.md + stories-v4.md) plus 8 NEW ones, marked NEW,
-# in the regions that had 4 each (South America +2, Middle East +2,
-# East Asia +2, Southeast Asia +1, Oceania +1).
+# 52 verified stories, Thursday 26 November 2026, 9 regions.
+# v5's 48 (stories-v5.md) plus 4 NEW ones, marked NEW, one in each
+# region that had 5 (North America, Europe, Africa, South Asia):
+# FAA Miami ground stop (webindia123), Depardieu trial ruling
+# (Today News Africa), Guinea-Bissau poll delayed (Today News
+# Africa / Al Jazeera), Congress sues Meta (Business Recorder).
+# Sources for the 4 new stories are in stories-v6.md.
 REGIONS = [
     ("NORTH AMERICA", [
         ("US unveils tariffs on 14 economies",
@@ -134,6 +174,8 @@ REGIONS = [
          "First pivotal US trial of implant for ALS paralysis."),
         ("SpaceX gets nod for 1M satellites",
          "FCC clears Starmind data-centre constellation."),
+        ("FAA halts Miami flights",
+         "Ground stop after FedEx jet overrun."),
     ]),
     ("SOUTH AMERICA", [
         ("Brazil pulls envoy from Argentina",
@@ -160,6 +202,8 @@ REGIONS = [
          "60-move Berlin in Geneva; match level 1.5-1.5."),
         ("EU budget summit ends with no deal",
          "Leaders break off early; talks move to Dec 17."),
+        ("Depardieu to face rape trial",
+         "Paris court rejects bid to stop case."),
     ]),
     ("AFRICA", [
         ("Cairo tanker fire kills 31",
@@ -172,6 +216,8 @@ REGIONS = [
          "Nigeria's giant refinery to list on Dec 1."),
         ("Tinubu vows rescue of 78 pupils",
          "Abducted Borno children held since May-June."),
+        ("Guinea-Bissau vote delayed",
+         "Military govt pushes poll to Nov 2028."),
     ]),
     ("MIDDLE EAST", [
         ("Tanker 'hit by mine' near Hormuz",
@@ -198,6 +244,8 @@ REGIONS = [
          "Ex-Pentagon official: regime liable if she is harmed."),
         ("US deports 1,700 Indians in 2026",
          "MEA confirms figure; opposes illegal migration."),
+        ("Congress sues Meta",
+         "Opposition alleges censorship."),
     ]),
     ("EAST ASIA", [
         ("Kim vows wider nuclear arsenal",
@@ -290,7 +338,7 @@ center(0, W, 26, "THURSDAY 26 NOVEMBER 2026", F_SERIF_B)
 d.line([40, 70, W - 40, 70], fill=INK, width=2)
 d.line([40, 74, W - 40, 74], fill=INK, width=1)
 center(0, W, 80,
-       "48 stories  •  9 regions  •  13 drawn scenes  •  Markets  •  Weather  •  Sport",
+       "52 stories  •  9 regions  •  13 drawn scenes  •  Markets  •  Weather  •  Sport  •  On This Day  •  Data",
        F_MAST_SUB, fill=GREY)
 
 # ---------------------------------------------------------------- lead stories
@@ -316,10 +364,11 @@ d.line([16, 172, W - 16, 172], fill=INK, width=1)
 # ---------------------------------------------------------------- scene panels
 # 13 drawn scenes in two rows: row 1 = 7 panels (136 wide), row 2 = 6
 # panels (160 wide). Each panel: small pictogram on the left, short
-# caption right. Panel height 58; the pictogram box is 42 x 40.
+# caption right. Panel height 54 (v6: was 58, tightened to make room
+# for the new sections below); the pictogram box is 42 x 40.
 SC_Y = 178
-SC_H = 58
-SC_GAP = 6
+SC_H = 54
+SC_GAP = 5
 ROW1_W = 136
 ROW2_W = 160
 
@@ -544,9 +593,9 @@ for i, (fn, head, detail) in enumerate(SCENES_ROW2):
 # The world map and the Markets & Weather panel share one band, side
 # by side, so the page stays one clear composition. Map on the left,
 # markets and weather on the right.
-BAND_Y = 298
-BAND_TOP = 312
-BAND_BOT = 384
+BAND_Y = 292
+BAND_TOP = 306
+BAND_BOT = 382
 MAP_L, MAP_R = 16, 520
 MW_L, MW_R = 528, 1008
 
@@ -622,11 +671,26 @@ HUBS = [
     (35, 31, "Jerusalem", -66, -2), (77, 20, "Mumbai", 5, -4),
     (127, 40, "Pyongyang", 5, -4), (113, -2, "Jakarta", 5, -4),
     (133, -25, "Canberra", 5, -4),
+    (-0.1, 51.5, "London", 5, -4), (55, 25, "Dubai", 5, -4),
+    (28, -26, "Johannesburg", 5, -4), (-58, -34, "Buenos Aires", 5, -4),
 ]
 for lon, lat, name, dx, dy in HUBS:
     x, y = proj(lon, lat)
     d.ellipse([x - 3, y - 3, x + 3, y + 3], fill=RED, outline=(255, 255, 255))
     d.text((x + dx, y + dy), name, font=F_MAP_LBL, fill=INK)
+
+# NEW (v6): a compass rose in the empty South Pacific, so the map
+# reads as a map, not just a shape. North is a red arrow; the
+# south, east and west arms are plain ink.
+CCX, CCY = proj(-160, -30)
+d.ellipse([CCX - 10, CCY - 10, CCX + 10, CCY + 10],
+          fill=(250, 248, 240), outline=INK, width=1)
+d.polygon([(CCX, CCY - 10), (CCX - 4, CCY), (CCX + 4, CCY)], fill=RED)
+d.polygon([(CCX, CCY + 10), (CCX - 4, CCY), (CCX + 4, CCY)],
+          outline=INK, width=1)
+d.line([CCX - 10, CCY, CCX + 10, CCY], fill=INK, width=1)
+d.line([CCX, CCY - 10, CCX, CCY + 10], fill=INK, width=1)
+d.text((CCX - 3, CCY - 21), "N", font=F_MAP_LBL, fill=INK)
 
 # ------------------------------------------------- NEW: markets & weather
 # Markets on the left half of the panel, weather on the right half,
@@ -653,20 +717,25 @@ for i, (city, temp, cond) in enumerate(WEATHER):
            font=F_WX, fill=GREY)
 
 # ---------------------------------------------------------------- UTC timeline
-TL_Y = 388
+TL_Y = 386
 d.text((16, TL_Y), "THE DAY IN UTC  —  times approximate", font=F_SEC, fill=INK)
 tl_line = TL_Y + 20
 d.line([30, tl_line, W - 30, tl_line], fill=INK, width=2)
 events = [
-    ("02:00", "Kyiv mall hit"),
-    ("04:18", "India marks 26/11"),
-    ("04:45", "Brazil pulls envoy"),
+    ("02:00", "Kyiv hit"),
+    ("04:18", "26/11 marked"),
+    ("04:45", "Brazil envoy"),
     ("07:45", "Bangkok blast"),
-    ("08:00", "Cairo tanker fire"),
-    ("09:30", "UK migration 77k"),
-    ("14:00", "US tariffs unveiled"),
-    ("15:00", "Macy's postponed"),
-    ("18:53", "Game 3 drawn"),
+    ("08:00", "Cairo fire"),
+    ("09:30", "UK migration"),
+    ("10:15", "Depardieu"),
+    ("12:00", "Bissau delay"),
+    ("14:00", "US tariffs"),
+    ("15:00", "Macy's off"),
+    ("16:30", "SpaceX nod"),
+    ("17:30", "Bears-Lions"),
+    ("18:53", "Game 3"),
+    ("21:30", "Eagles-Cowboys"),
 ]
 n = len(events)
 for i, (t, label) in enumerate(events):
@@ -679,7 +748,7 @@ for i, (t, label) in enumerate(events):
     d.text((lx, tl_line + 18), label, font=F_TL, fill=GREY)
 
 # ------------------------------------------------------- NEW: sports strip
-SP_Y = 440
+SP_Y = 438
 d.rectangle([16, SP_Y, W - 16, SP_Y + 24], fill=BLUE)
 d.text((24, SP_Y + 5), "SPORT", font=F_SPORT, fill=(255, 255, 255))
 sx = 24 + d.textlength("SPORT  ", font=F_SPORT) + 14
@@ -693,29 +762,111 @@ d.text((W - 16 - d.textlength(SPORTS_NOTE, font=F_SANS_XS), SP_Y + 7),
        SPORTS_NOTE, font=F_SANS_XS, fill=(200, 210, 225))
 
 # ---------------------------------------------------------------- region grid
-# 48 stories, 9 regions, 3 rows x 3 cols. Story spacing 22px (head
-# 11pt bold, detail 9pt). A 6-story cell is 159px tall, a 5-story
-# cell 137px; every row holds a 6-story cell, so all rows are 159px.
-GRID_Y = 468
+# 52 stories, 9 regions, 3 rows x 3 cols. v6 runs the grid one point
+# smaller (head 10pt bold, detail 8pt) so the page gains room for the
+# two new sections below without dropping any story. Story spacing
+# 20px (head 10pt, detail 8pt). A 6-story cell is 140px tall; every
+# row holds a 6-story cell, so all rows are 140px.
+GRID_Y = 464
 COL_W = 328
-ROW_H = 159
-STORY_DY = 22
+ROW_H = 140
+STORY_DY = 20
 for idx, (region, stories) in enumerate(REGIONS):
     col, row = idx % 3, idx // 3
     x0 = 16 + col * (COL_W + 8)
     y0 = GRID_Y + row * (ROW_H + 6)
-    d.rectangle([x0, y0, x0 + COL_W, y0 + 22], fill=RED)
+    d.rectangle([x0, y0, x0 + COL_W, y0 + 20], fill=RED)
     d.text((x0 + 8, y0 + 3), region, font=F_REGION, fill=(255, 255, 255))
-    d.rectangle([x0, y0 + 22, x0 + COL_W, y0 + ROW_H],
+    d.rectangle([x0, y0 + 20, x0 + COL_W, y0 + ROW_H],
                 outline=(200, 196, 186), width=1)
-    sy = y0 + 27
+    sy = y0 + 21
     for head, detail in stories:
-        d.text((x0 + 8, sy), head, font=F_HEAD, fill=INK)
-        d.text((x0 + 8, sy + 11), detail, font=F_SANS_XS, fill=GREY)
+        d.text((x0 + 8, sy), head, font=F_GRID_H, fill=INK)
+        d.text((x0 + 8, sy + 10), detail, font=F_GRID_D, fill=GREY)
         sy += STORY_DY
 
+# ------------------------------------------- NEW (v6): on this day + data
+# Two new sections sharing one band below the grid, so the page gains
+# two more reasons to be read without growing taller. On the left,
+# ON THIS DAY: four things that happened on a 26 November in other
+# years — all well-documented history (Tutankhamun's tomb entered
+# 26 Nov 1922; Casablanca premiered in New York 26 Nov 1942;
+# Concorde's last flight 26 Nov 2003; NASA's Curiosity rover
+# launched 26 Nov 2011). On the right, DATA SNAPSHOT: the day's four
+# market moves from the Markets panel, drawn as horizontal bars so
+# the scale is visible at a glance. Every value is already verified
+# in the MARKETS table above; the bars only re-draw those numbers.
+F_OTD = _font("DejaVuSans.ttf", 9)
+F_OTD_B = _font("DejaVuSans-Bold.ttf", 9)
+F_OTD_Y = _font("DejaVuSans-Bold.ttf", 10)
+F_DATA = _font("DejaVuSans.ttf", 9)
+F_DATA_B = _font("DejaVuSans-Bold.ttf", 9)
+F_DATA_V = _font("DejaVuSans-Bold.ttf", 9)
+
+BAND2_Y = 902
+BAND2_BOT = 958
+OTD_L, OTD_R = 16, 600
+DATA_L, DATA_R = 616, 1008
+
+d.rectangle([OTD_L, BAND2_Y, OTD_R, BAND2_BOT],
+            outline=(150, 146, 136), width=1, fill=(240, 238, 230))
+d.rectangle([DATA_L, BAND2_Y, DATA_R, BAND2_BOT],
+            outline=(150, 146, 136), width=1, fill=(240, 238, 230))
+
+
+def draw_calendar(dx, dy):
+    """Small wall-calendar pictogram: page, two binder rings, the 26."""
+    d.rectangle([dx, dy + 3, dx + 18, dy + 19], fill=(250, 248, 240),
+                outline=INK, width=1)
+    d.rectangle([dx, dy + 3, dx + 18, dy + 9], fill=RED)
+    d.line([dx + 5, dy, dx + 5, dy + 5], fill=INK, width=2)
+    d.line([dx + 13, dy, dx + 13, dy + 5], fill=INK, width=2)
+    d.text((dx + 5, dy + 10), "26", font=F_OTD_Y, fill=INK)
+
+
+draw_calendar(OTD_L + 8, BAND2_Y + 4)
+d.text((OTD_L + 32, BAND2_Y + 6), "ON THIS DAY — 26 NOVEMBER",
+       font=F_SEC, fill=INK)
+d.text((DATA_L + 8, BAND2_Y + 6), "DATA SNAPSHOT — MARKETS, % CHANGE",
+       font=F_SEC, fill=INK)
+
+ON_THIS_DAY = [
+    ("1922", "Tutankhamun's tomb opened"),
+    ("1942", "Casablanca premiered"),
+    ("2003", "Concorde's last flight"),
+    ("2011", "Curiosity launched to Mars"),
+]
+for i, (year, what) in enumerate(ON_THIS_DAY):
+    col, row = i % 2, i // 2
+    ix = OTD_L + 8 + col * 292
+    iy = BAND2_Y + 24 + row * 16
+    d.text((ix, iy), year, font=F_OTD_Y, fill=RED)
+    yw = d.textlength(year + "  ", font=F_OTD_Y)
+    d.text((ix + yw, iy), what, font=F_OTD, fill=INK)
+
+
+def hbar(y, label, value, pct, max_pct, color):
+    """One horizontal bar: label at left, bar scaled to max_pct, value."""
+    d.text((DATA_L + 8, y), label, font=F_DATA, fill=INK)
+    bx0 = DATA_L + 76
+    bx1 = DATA_R - 72
+    bw = (bx1 - bx0) * pct / max_pct
+    d.rectangle([bx0, y + 1, bx0 + bw, y + 7], fill=color)
+    d.line([bx0, y + 1, bx0, y + 7], fill=INK, width=1)
+    d.text((bx0 + bw + 5, y), value, font=F_DATA_V, fill=INK)
+
+
+DATA_BARS = [
+    ("FTSE 100", "+1.75%", 1.75, BLUE),
+    ("DAX", "+2.08%", 2.08, BLUE),
+    ("Nikkei 225", "+0.86%", 0.86, BLUE),
+    ("Brent", "+3.51%", 3.51, GREEN),
+]
+for i, (label, value, pct, color) in enumerate(DATA_BARS):
+    hbar(BAND2_Y + 22 + i * 9, label, value, pct, 3.51, color)
+
 # --------------------------------------------------- NEW: editorial / quote
-ED_Y = 961
+ED_Y = 964
 d.rectangle([16, ED_Y, W - 16, ED_Y + 26], outline=INK, width=1,
             fill=(240, 238, 230))
 d.text((24, ED_Y + 3), "QUOTE OF THE DAY", font=F_MKT_B, fill=RED)
@@ -726,13 +877,13 @@ d.text((24, ED_Y + 16), QUOTE_ATTR + "  —  " + QUOTE_EDIT,
        font=F_SANS_XS, fill=GREY)
 
 # ---------------------------------------------------------------- footer
-d.line([16, 991, W - 16, 991], fill=INK, width=1)
-center(0, W, 995,
-       "DATE CHECK \u2713  Thursday 26 November 2026 — all 48 stories dated 26 Nov 2026",
+d.line([16, 994, W - 16, 994], fill=INK, width=1)
+center(0, W, 998,
+       "DATE CHECK \u2713  Thursday 26 November 2026 — all 52 stories dated 26 Nov 2026",
        F_FOOT_B)
-center(0, W, 1006,
-       "Sources: Reuters • AP • The Hindu • Chess.com • NDTV • Firstpost • MercoPress • ONS • WHO • KCNA • PCG • ATSB • FCC • Euronews • Punch • BBN Times • Sportradar • Moneycontrol • Business Recorder",
-       F_FOOT)
+center(0, W, 1009,
+       "Sources: Reuters • AP • The Hindu • Chess.com • NDTV • Firstpost • MercoPress • ONS • WHO • KCNA • PCG • ATSB • FCC • Euronews • Punch • BBN Times • Sportradar • Moneycontrol • Business Recorder • Today News Africa • Al Jazeera",
+       F_FOOT_S)
 
 # ---------------------------------------------------------------- save
 out_dir = resolve_output_dir()
