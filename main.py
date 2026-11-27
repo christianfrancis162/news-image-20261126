@@ -29,10 +29,23 @@ def sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
+def resolve_output_dir() -> Path:
+    """Return the output directory: MAKEFUN_OUTPUT_DIR, else /output.
+
+    A relative value is resolved against the current working directory
+    so the copy always lands in a well-defined place.
+    """
+    raw = os.environ.get("MAKEFUN_OUTPUT_DIR", "/output")
+    out_dir = Path(raw).expanduser()
+    if not out_dir.is_absolute():
+        out_dir = (Path.cwd() / out_dir).resolve()
+    return out_dir
+
+
 def place_entry() -> Path:
     if not ENTRY.is_file():
         raise FileNotFoundError(f"source image missing: {ENTRY}")
-    out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
+    out_dir = resolve_output_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / "entry.png"
     shutil.copyfile(ENTRY, target)
