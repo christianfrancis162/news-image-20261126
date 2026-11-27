@@ -30,6 +30,8 @@ def sha256(path: Path) -> str:
 
 
 def place_entry() -> Path:
+    if not ENTRY.is_file():
+        raise FileNotFoundError(f"source image missing: {ENTRY}")
     out_dir = Path(os.environ.get("MAKEFUN_OUTPUT_DIR", "/output"))
     out_dir.mkdir(parents=True, exist_ok=True)
     target = out_dir / "entry.png"
